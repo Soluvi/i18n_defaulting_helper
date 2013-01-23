@@ -3,15 +3,23 @@ module I18nDefaultingHelper
 
     def self.included(base)
       ActionView::Helpers::TranslationHelper.module_eval do
+
         alias_method :original_translate, :translate
         def translate(key, options = {})
+          options.merge!(raise: I18n::MissingTranslationData)
           begin
-            original_translate(key, options.merge(raise: I18n::MissingTranslationData))
+            return original_translate(key, options)
+          rescue I18n::MissingTranslationData => e
+            original_exception = e
+          end
+          begin
+            return original_translate(key.gsub(/^\./, ''), options.merge(scope: :defaults))
           rescue I18n::MissingTranslationData
-            original_translate(key.gsub(/^\./, ''), options.merge(scope: :defaults))
+            raise original_exception
           end
         end
         alias_method :t, :translate
+
       end
     end
 
